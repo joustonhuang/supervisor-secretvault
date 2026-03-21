@@ -1,0 +1,10 @@
+{
+  "vault": {
+    "defaultTtlSeconds": 180,
+    "maxTtlSeconds": 3600,
+    "interactiveFallback": true
+  },
+  "keyman": {
+    "command": "./missing-keyman.js"
+  }
+}
