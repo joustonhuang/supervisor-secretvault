@@ -2,6 +2,9 @@
 
 MVP governed secret vault plugin for supervisor-managed AI agents.
 
+This is not a secret manager.
+This is a minimal enforcement primitive for controlled secret access in agent systems.
+
 ## What it does
 
 - stores secrets encrypted at rest with AES-256-GCM
