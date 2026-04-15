@@ -109,3 +109,39 @@ test('request denies unattended fallback when keyman missing', () => {
   const body = JSON.parse(denied.stdout);
   assert.equal(body.authorizationPath, 'local-human-fallback-unavailable');
 });
+
+test('SECRETVAULT_ROOT isolates runtime layout while keeping absolute Keyman path valid', () => {
+  const isolatedRoot = path.join(ROOT, 'tmp', 'isolated-root');
+  fs.rmSync(isolatedRoot, { recursive: true, force: true });
+  fs.mkdirSync(path.join(isolatedRoot, 'config'), { recursive: true });
+  fs.mkdirSync(path.join(isolatedRoot, 'secrets'), { recursive: true });
+  fs.mkdirSync(path.join(isolatedRoot, 'grants'), { recursive: true });
+  fs.mkdirSync(path.join(isolatedRoot, 'audit'), { recursive: true });
+  fs.mkdirSync(path.join(isolatedRoot, 'tmp'), { recursive: true });
+
+  const keyman = path.join(ROOT, 'config', 'allow-all-keyman.js');
+  fs.writeFileSync(keyman, '#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify({approved:true, authorizationPath:"keyman-forward"}))\n');
+  fs.chmodSync(keyman, 0o755);
+  fs.writeFileSync(
+    path.join(isolatedRoot, 'config', 'default.json'),
+    JSON.stringify({
+      vault: { defaultTtlSeconds: 180, maxTtlSeconds: 3600, interactiveFallback: false },
+      keyman: { command: keyman },
+    }, null, 2)
+  );
+
+  const env = { ...ENV, SECRETVAULT_ROOT: isolatedRoot };
+  const init = spawnSync('node', [CLI, 'init'], { cwd: ROOT, env, encoding: 'utf8' });
+  assert.equal(init.status, 0, init.stderr);
+
+  const seed = spawnSync('node', [CLI, 'seed', '--alias', 'fake-iso', '--value', 'FAKE-ISO'], { cwd: ROOT, env, encoding: 'utf8' });
+  assert.equal(seed.status, 0, seed.stderr);
+  assert.equal(fs.existsSync(path.join(isolatedRoot, 'secrets', 'fake-iso.json')), true);
+  assert.equal(fs.existsSync(path.join(ROOT, 'secrets', 'fake-iso.json')), false);
+
+  const granted = spawnSync('node', [CLI, 'request', '--alias', 'fake-iso', '--purpose', 'isolated-test', '--agent', 'tester'], { cwd: ROOT, env, encoding: 'utf8' });
+  assert.equal(granted.status, 0, granted.stderr);
+  const body = JSON.parse(granted.stdout);
+  assert.equal(body.authorizationPath, 'keyman-forward');
+  assert.equal(body.path.startsWith(path.join(isolatedRoot, 'grants')), true);
+});

@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const readline = require('readline');
 const { spawnSync } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(process.env.SECRETVAULT_ROOT || path.resolve(__dirname, '..'));
 const DIRS = {
   secrets: path.join(ROOT, 'secrets'),
   grants: path.join(ROOT, 'grants'),
@@ -13,7 +13,9 @@ const DIRS = {
   config: path.join(ROOT, 'config'),
   tmp: path.join(ROOT, 'tmp'),
 };
-const CONFIG_PATH = path.join(DIRS.config, 'default.json');
+const CONFIG_PATH = process.env.SECRETVAULT_CONFIG_PATH
+  ? path.resolve(process.env.SECRETVAULT_CONFIG_PATH)
+  : path.join(DIRS.config, 'default.json');
 const MASTER_KEY_ENV = 'SECRETVAULT_MASTER_KEY';
 
 function ensureLayout() {
