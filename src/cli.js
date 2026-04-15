@@ -129,8 +129,19 @@ function resolveKeymanCommand(config) {
 function requestDecision(request, config) {
   const keymanCmd = resolveKeymanCommand(config);
   if (keymanCmd && fileExists(keymanCmd)) {
+    const traceId = crypto.randomUUID();
+    const authorizationRequest = {
+      ...request,
+      requester: request.agent || null,
+      secret_alias: request.alias,
+      reason: request.purpose,
+      ttl_seconds: request.ttlSeconds,
+      trace_id: traceId,
+      request_id: traceId,
+      scope: request.alias,
+    };
     const result = spawnSync(keymanCmd, ['authorize'], {
-      input: JSON.stringify(request),
+      input: JSON.stringify(authorizationRequest),
       encoding: 'utf8',
       env: process.env,
     });
